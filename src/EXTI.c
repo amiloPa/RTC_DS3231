@@ -12,6 +12,18 @@ void EXTI_Conf(void)
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
 
 
+	GPIO_InitTypeDef GPIOInit;
+
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+
+
+	 //Definicja pinu PB5 do zewnêtrznego przerwania EXTI
+
+	GPIOInit.GPIO_Pin = GPIO_Pin_5;
+	GPIOInit.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIOInit.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(GPIOB, &GPIOInit);
 
 
 	//Connect EXTI Lines to Button Pins
@@ -40,57 +52,25 @@ void EXTI_Conf(void)
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     //update NVIC registers
     NVIC_Init(&NVIC_InitStruct);
-
-
-
-//    //enable AFIO clock
-//    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,  ENABLE);
-//    EXTI_InitTypeDef EXTI_InitStructure;
-//    //NVIC structure to set up NVIC controller
-//    NVIC_InitTypeDef NVIC_InitStructure;
-//    //GPIO structure used to initialize Button pins
-//    //Connect EXTI Lines to Button Pins
-//    GPIO_EXTILineConfig(BWAKEUPPORTSOURCE, BWAKEUPPINSOURCE);
-//    GPIO_EXTILineConfig(BTAMPERPORTSOURCE, BTAMPERPINSOURCE);
-//    GPIO_EXTILineConfig(BUSER1PORTSOURCE, BUSER1PINSOURCE);
-//    GPIO_EXTILineConfig(BUSER2PORTSOURCE, BUSER2PINSOURCE);
-//    //select EXTI line0
-//    EXTI_InitStructure.EXTI_Line = EXTI_Line0;
-//    //select interrupt mode
-//    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-//    //generate interrupt on rising edge
-//    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
-//    //enable EXTI line
-//    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-//    //send values to registers
-//    EXTI_Init(&EXTI_InitStructure);
-//    //select EXTI line13
-//    EXTI_InitStructure.EXTI_Line = EXTI_Line13;
-//    EXTI_Init(&EXTI_InitStructure);
-//    EXTI_InitStructure.EXTI_Line = EXTI_Line3;
-//    EXTI_Init(&EXTI_InitStructure);
-//    EXTI_InitStructure.EXTI_Line = EXTI_Line8;
-//    EXTI_Init(&EXTI_InitStructure);
-    //disable AFIO clock
-//    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,  DISABLE);
-//    //configure NVIC
-//    //select NVIC channel to configure
-//    NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn;
-//    //set priority to lowest
-//    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x0F;
-//    //set subpriority to lowest
-//    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0x0F;
-//    //enable IRQ channel
-//    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-//    //update NVIC registers
-//    NVIC_Init(&NVIC_InitStructure);
-//    //select NVIC channel to configure
-//    NVIC_InitStructure.NVIC_IRQChannel = EXTI3_IRQn;
-//    NVIC_Init(&NVIC_InitStructure);
-//    NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-//    NVIC_Init(&NVIC_InitStructure);
-//    NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
-//    NVIC_Init(&NVIC_InitStructure);
 }
 
+
+void EXTI9_5_IRQHandler(void)
+{
+	static volatile uint8_t counter = 0;
+
+    //Check if EXTI_Line0 is asserted
+    if(EXTI_GetITStatus(EXTI_Line5) != RESET)
+    {
+    	counter++;
+    	flag = 1;
+    }
+    //we need to clear line pending bit manually
+    EXTI_ClearITPendingBit(EXTI_Line5);
+
+    if(counter == No_of_samles)
+    {
+    	counter = 0;
+    }
+}
 

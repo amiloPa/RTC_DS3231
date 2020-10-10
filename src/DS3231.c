@@ -11,9 +11,9 @@
 
 #define DS32311_ADDRES 0xD0
 
-volatile uint8_t flag;
+
 uint16_t century;
-TTEMP temperature;
+
 
 
 
@@ -71,14 +71,45 @@ void DS3231_get_temp (TTEMP *temp)
 {
 	int8_t buf[1];
 	uint8_t fr[4] = {0, 2, 5, 7};
+	int16_t avearage_temp_value = 0;
+	static uint8_t i = 1;
+	uint8_t k;
 
-//	I2C_READ(DS32311_ADDRES, 0x11, 2, temp->pcf_buf);
 	I2C_READ(DS32311_ADDRES, 0x11, 2, &temp->pcf_buf);
 
 	uint8_t *wsk = temp->pcf_buf;
 
 	temp->cel = *wsk;
 	temp->fract = *(wsk + 1)>>6;
+
+
+	if(i <= No_of_samles)
+	{
+			if(temp->cel >= 0) 	temp->smaples_of_temp[i-1] = 10 * temp->cel + fr[temp->fract];
+			else 				temp->smaples_of_temp[i-1] = 10 * temp->cel + fr[3 - temp->fract];
+	}
+
+	else
+	{
+		for (k = 1; k < i - 1; k++)
+		{
+			temp->smaples_of_temp[k-1] = temp->smaples_of_temp[k];
+		}
+
+		if(temp->cel >= 0) 	temp->smaples_of_temp[--k] = 10 * temp->cel + fr[temp->fract];
+		else 				temp->smaples_of_temp[--k] = 10 * temp->cel + fr[3 - temp->fract];
+	}
+
+	for (k = 0; k < i - 1; k++)
+	{
+		avearage_temp_value += temp->smaples_of_temp[k];
+	}
+
+
+	temp->avearage_cel = avearage_temp_value / 10 / (i - 1) ;
+	temp->avearage_fract = (avearage_temp_value / (i - 1)) % 10;
+
+	if( i <= No_of_samles) i++;
 
 	I2C_READ(DS32311_ADDRES, 0x0e, 1, buf);
 	buf[0] |= (1<<5);
@@ -91,12 +122,16 @@ void DS3231_get_temp (TTEMP *temp)
 	if(*wsk & 0x80) *(znak++) = '-';
 	else			*(znak++) = ' ';
 
-	itoa(*wsk, znak, 10);
-	znak += 2;
+
+	if(temp->avearage_cel < 0) 	itoa((-1 * temp->avearage_cel), znak, 10);
+	else						itoa(temp->avearage_cel, znak, 10);
+
+	if((temp->avearage_cel > -10) && (temp->avearage_cel < 10) ) znak++;
+	else						znak += 2;
+
 	*(znak++) = ',';
 
-	if(temp->cel >= 0) 	itoa(fr[temp->fract],znak,10);
-	else 				itoa(fr[3 - temp->fract],znak,10);
+	itoa(temp->avearage_fract,znak,10);
 
 	*(++znak) = 0;
 
@@ -108,7 +143,6 @@ void DS3231_get_rtc_datetime(TDATETIME *dt)
 {
 
 	//https://www.youtube.com/watch?v=2qJDq2d0Qe0&ab_channel=Atnel-mirekk36
-//	I2C_READ(DS32311_ADDRES, 0x00, 7, &dt->pcf_buf);
 	I2C_READ(DS32311_ADDRES, 0x00, 7, dt->pcf_buf);
 
 	int8_t i;
@@ -153,6 +187,25 @@ void DS3231_get_rtc_datetime(TDATETIME *dt)
 	*(znak++) =  (wsk[4] & 0x0F)       + '0';
 	*(znak++) = 0;
 #endif
+
+
+#ifdef DATETIME_AS_STRING
+
+	znak = dt->YY_MM;
+	itoa(dt->YY, znak, 10);
+	znak += 4;
+	*(znak++) = FILE_NAME_SEPARATOR;
+
+	*(znak++) = ((wsk[5] & 0x1F) >> 4) + '0';
+	*(znak++) = (wsk[5] & 0x0F)        + '0';
+	*(znak++) = *".";
+	*(znak++) = *"c";
+	*(znak++) = *"s";
+	*(znak++) = *"v";
+	*(znak++) = 0;
+#endif
+
+
 
 	uint8_t godziny  = dt->hh;
 	if (summer_winter_time_correction( &dt->dst, dt->YY, dt->MM, dt->DD, godziny))
@@ -202,7 +255,7 @@ void DS3231_EVENT ( void )
 		if(rtc_callback) rtc_callback(&datetime);
 		if(rtc_temperature_callback) rtc_temperature_callback(&temperature);
 
-		uart_puts("\n\r");
+
 
 		flag = 0;
 	}
@@ -236,19 +289,7 @@ uint8_t bcd2dec(uint8_t bcd)
 }
 
 
-//---------------------------------------------------------------------------------
-void EXTI9_5_IRQHandler(void)
-{
 
-    //Check if EXTI_Line0 is asserted
-    if(EXTI_GetITStatus(EXTI_Line5) != RESET)
-    {
-    	BB(GPIOC->ODR, PC13) ^= 1;
-    	flag = 1;
-    }
-    //we need to clear line pending bit manually
-    EXTI_ClearITPendingBit(EXTI_Line5);
-}
 
 
 //--------------------------------------------------------------------------------------------------------

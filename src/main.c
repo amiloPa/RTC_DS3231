@@ -30,12 +30,12 @@ void show_data_and_time(TDATETIME *dt);
 void show_temperature_rtc(TTEMP *temp);
 
 
-void delay_ms(int ms)
-{
-	int i, tms;
-	tms = 9000*ms;
-	for(i=0;i<tms;i++);
-}
+//void delay_ms(int ms)
+//{
+//	int i, tms;
+//	tms = 9000*ms;
+//	for(i=0;i<tms;i++);
+//}
 
 
 int main(void)
@@ -105,6 +105,7 @@ void show_temperature_rtc(TTEMP *temp)
 
 	uart_puts(temp->temperature);
 	uart_puts("\t");
+	uart_puts("\n\r");
 #endif
 
 }

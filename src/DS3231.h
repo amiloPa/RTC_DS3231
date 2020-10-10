@@ -9,12 +9,12 @@
 #define DS3231_H_
 
 #include "stm32f10x.h"
-#include "F103_lib.h"
-#include "UART.h"
 #include "I2C.h"
+#include "EXTI.h"
 
 #define DATETIME_AS_STRING 1
 #define DATA_SEPARATOR '-'
+#define FILE_NAME_SEPARATOR '_'
 
 
 typedef enum { pon =1, wto = 2, sro = 3, czw = 4, pia = 5, sob = 6, nied = 7 } TDAYS;
@@ -40,17 +40,20 @@ typedef struct
 #if DATETIME_AS_STRING
 	char time[9];
 	char date [11];
+	char YY_MM [12];
 #endif
 	uint8_t pcf_buf[5];
 }TDATETIME;
 
 
-TDATETIME datetime;
-
 typedef struct
 {
 	int8_t cel;
 	uint8_t fract;
+
+	int8_t avearage_cel;
+	uint8_t avearage_fract;
+	int16_t smaples_of_temp[No_of_samles];
 
 #if DATETIME_AS_STRING
 	char temperature[5];
@@ -61,7 +64,8 @@ typedef struct
 } TTEMP;
 
 
-
+TDATETIME datetime;
+TTEMP temperature;
 
 
 void DS3231_set_rtc_datetime(TDATETIME *dt, uint16_t YY, uint8_t MM, uint8_t DD, uint8_t hh, uint8_t mm, uint8_t ss );
